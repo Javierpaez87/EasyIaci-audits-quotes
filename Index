@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <style>
+      :root {
+        --primary-dark: #1e293b;
+        --accent-blue: #3b82f6;
+        --success-green: #10b981;
+        --danger-red: #ef4444;
+        --warning-yellow: #f59e0b;
+        --bg-light: #f8fafc;
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      }
+
+      /* CAMBIO QUIRÚRGICO: Ocultamos el body inicialmente para evitar el "flash" del contenido */
+      body { 
+        display: none; 
+        background-color: var(--bg-light); 
+        font-family: 'Inter', sans-serif; 
+        padding: 30px 20px; 
+        color: #334155; 
+      }
+
+      /* Estilos del modal de acceso denegado */
+      .access-denied-container {
+        display: flex !important; height: 80vh; justify-content: center; align-items: center; text-align: center;
+      }
+      .denied-card {
+        background: white; padding: 50px; border-radius: 24px; box-shadow: var(--card-shadow); max-width: 450px;
+      }
+
+      .container-fluid { max-width: 1300px; }
+
+      /* Tabs Premium */
+      .nav-pills { background: white; padding: 6px; border-radius: 14px; box-shadow: var(--card-shadow); display: inline-flex; }
+      .nav-pills .nav-link { 
+        color: #64748b; font-weight: 600; border-radius: 10px; padding: 10px 20px; 
+        transition: all 0.3s ease; border: none;
+      }
+      .nav-pills .nav-link.active { background-color: var(--primary-dark); color: white; }
+
+      /* Header & Update Badge */
+      h2 { letter-spacing: -0.025em; }
+      #lastUpdate { 
+        background: #e2e8f0; padding: 4px 12px; border-radius: 20px; 
+        font-weight: 500; font-size: 0.75rem; color: #475569;
+      }
+
+      /* Stats Card */
+      .card-stats { 
+        background: var(--primary-dark); 
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: white; border-radius: 18px; padding: 25px; 
+        margin-bottom: 25px; position: relative; overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+      }
+      .card-stats::after {
+        content: ""; position: absolute; top: -50%; right: -10%; width: 200px; height: 200px;
+        background: rgba(59, 130, 246, 0.1); border-radius: 50%;
+      }
+      #totalDeudaLabel { font-size: 2.5rem; letter-spacing: -0.05em; color: #60a5fa; }
+
+      /* Filtros */
+      .filters { 
+        background: white; border-radius: 18px; padding: 25px; 
+        margin-bottom: 25px; border: 1px solid #f1f5f9; box-shadow: var(--card-shadow);
+      }
+      .form-label { color: #64748b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+      .form-control, .form-select { border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px 15px; font-size: 0.9rem; }
+      .form-control:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+      /* Tabla Estilo App */
+      .table-container { 
+        background: white; border-radius: 18px; padding: 0; 
+        overflow: hidden; border: 1px solid #f1f5f9; box-shadow: var(--card-shadow);
+      }
+      .table { margin-bottom: 0; }
+      .table thead th { 
+        background: #f8fafc; padding: 18px; font-size: 0.7rem; 
+        color: #64748b; border-bottom: 1px solid #f1f5f9;
+      }
+      .table tbody td { padding: 16px 18px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+      
+      .table-fixed-column { 
+        position: sticky; left: 0; background: white !important; z-index: 2; 
+        font-weight: 600; color: var(--primary-dark);
+      }
+
+      /* Estilos para montos en celdas */
+      .amount-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; display: inline-block; }
+      .text-paid { color: var(--success-green); text-decoration: line-through; background: #dcfce7; }
+      .text-partial { color: #9a3412; background: #ffedd5; }
+      .text-debt { color: var(--danger-red); background: #fee2e2; }
+      .text-surplus { color: #1e40af; background: #dbeafe; }
+      
+      .small-paid { font-size: 0.6rem; display: block; opacity: 0.8; margin-bottom: 2px; font-weight: 600; color: #64748b; }
+      
+      /* Mejora visual para Excepción Familiar */
+      .badge-familiar { border: 1.5px solid var(--accent-blue) !important; }
+      
+      .row-deudor { background-color: #fffafb; }
+      .row-deudor:hover { background-color: #fff1f2 !important; }
+
+      /* Formulario de Configuración */
+      .form-edit-precios { 
+        max-width: 550px; margin: 40px auto; background: white; padding: 35px; 
+        border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1); 
+      }
+      .btn-primary { 
+        background: var(--accent-blue); border: none; padding: 14px; border-radius: 12px;
+        font-weight: 600; transition: all 0.3s ease;
+      }
+      .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4); }
+
+      .footer-bondi { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 60px; padding-bottom: 30px; }
+      
+      /* Dashboard Cursos */
+      .course-card {
+        background: white; border-radius: 15px; border: 1px solid #e2e8f0;
+        padding: 20px; transition: all 0.3s ease; height: 100%;
+      }
+      .course-card:hover { transform: translateY(-5px); box-shadow: var(--card-shadow); }
+      .revenue-badge { background: #dcfce7; color: #166534; padding: 5px 10px; border-radius: 8px; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <div id="app-container" class="container-fluid">
+      
+      <div class="text-center mb-5">
+        <ul class="nav nav-pills shadow-sm">
+          <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-auditoria">
+              <i class="bi bi-pie-chart-fill me-2"></i>Auditoría
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-cursos" onclick="cargarDashboardCursos()">
+              <i class="bi bi-mortarboard-fill me-2"></i>Cursos
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-config" onclick="cargarEditorPrecios()">
+              <i class="bi bi-sliders me-2"></i>Aranceles
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="tab-content">
+        
+        <div class="tab-pane fade show active" id="tab-auditoria">
+          <div class="text-center mb-4">
+            <h2 class="fw-bold text-dark mb-2">IACI Audit & Cuotas</h2>
+            <span id="lastUpdate"><i class="bi bi-arrow-repeat me-1"></i>Sincronizando...</span>
+          </div>
+
+          <div class="row mb-4 justify-content-center">
+            <div class="col-md-6 col-lg-4 text-center">
+              <div class="card-stats">
+                <small class="text-uppercase fw-bold opacity-50 mb-2 d-block">Deuda Total Identificada</small>
+                <h2 id="totalDeudaLabel" class="fw-bold mb-0">$ 0</h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end mb-3 gap-2">
+              <button class="btn btn-light border px-3 text-secondary" onclick="borrarFiltros()">Limpiar</button>
+              <button class="btn btn-dark px-4 shadow" onclick="cargarMatriz()">Actualizar</button>
+          </div>
+
+          <div class="filters">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Alumno</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                  <input type="text" id="busqueda" class="form-control border-start-0 ps-0" placeholder="Buscar..." oninput="filtrarMatriz()">
+                </div>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-bold">Desde</label>
+                <select id="mesInicio" class="form-select" onchange="filtrarMatriz()"></select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-bold">Hasta</label>
+                <select id="mesFin" class="form-select" onchange="filtrarMatriz()"></select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-bold">Curso</label>
+                <select id="filtroCurso" class="form-select" onchange="filtrarMatriz()"></select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-bold">Estado</label>
+                <select id="filtroEstado" class="form-select" onchange="filtrarMatriz()">
+                  <option value="todos">Todos</option>
+                  <option value="deudores">Deudores</option>
+                  <option value="al_dia">Al día</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead id="headMatriz"></thead>
+                <tbody id="bodyMatriz">
+                  <tr><td colspan="15" class="text-center p-5 text-muted">Iniciando motor de datos...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-cursos">
+          <div class="row g-4">
+            <div class="col-lg-4">
+              <div class="form-edit-precios m-0 w-100">
+                <h4 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2 text-primary"></i>Nuevo Curso</h4>
+                <div class="mb-3">
+                  <label class="form-label">Nombre del Curso</label>
+                  <input type="text" id="newCourseName" class="form-control" placeholder="Ej: Children 5b">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Arancel Matrícula</label>
+                  <input type="number" id="newCourseMatricula" class="form-control" placeholder="0">
+                </div>
+                <div class="mb-4">
+                  <label class="form-label">Arancel Mensual (Marzo-Dic)</label>
+                  <input type="number" id="newCourseCuota" class="form-control" placeholder="0">
+                </div>
+                <button class="btn btn-primary w-100" onclick="ejecutarCrearCurso()">Abrir Curso</button>
+                <div id="statusNewCourse" class="mt-3 text-center small"></div>
+              </div>
+            </div>
+            <div class="col-lg-8">
+              <div class="filters">
+                <h4 class="fw-bold mb-4">Dashboard de Revenue por Curso</h4>
+                <div class="row g-3" id="containerDashboardCursos">
+                   </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-config">
+          <div class="form-edit-precios">
+            <div class="text-center mb-4">
+              <div class="bg-primary bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
+                <i class="bi bi-currency-dollar text-primary h3"></i>
+              </div>
+              <h3 class="fw-bold text-dark">Edición de Aranceles</h3>
+              <p class="text-muted">Modifica valores oficiales por curso y periodo.</p>
+            </div>
+            
+            <div class="mb-4">
+              <label class="form-label fw-bold">Curso a modificar</label>
+              <select id="editCurso" class="form-select form-select-lg"></select>
+            </div>
+            
+            <div class="row g-3 mb-4">
+              <div class="col-6">
+                <label class="form-label fw-bold">Periodo Inicio</label>
+                <select id="editMesInicio" class="form-select"></select>
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-bold">Periodo Fin</label>
+                <select id="editMesFin" class="form-select"></select>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="form-label fw-bold">Nuevo Valor Cuota</label>
+              <div class="input-group input-group-lg">
+                <span class="input-group-text bg-white">$</span>
+                <input type="number" id="editMonto" class="form-control" placeholder="0.00">
+              </div>
+            </div>
+            
+            <button class="btn btn-primary w-100 shadow-lg" onclick="ejecutarActualizacionRango()">
+              Actualizar Periodos
+            </button>
+            
+            <div id="statusUpdate" class="mt-4 text-center fw-medium"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="footer-bondi">
+        <i class="bi bi-shield-check me-1"></i> IACI Audit & Cuotas · BondiApps 2026
+      </div>
+    </div>
+
+    <script>
+      // Verificación de seguridad inmediata antes de cargar cualquier dato
+      (function() {
+        google.script.run.withSuccessHandler(function(accesoPermitido) {
+          if (accesoPermitido === false || accesoPermitido === undefined) {
+             document.body.innerHTML = `
+              <div class="access-denied-container">
+                <div class="denied-card">
+                  <i class="bi bi-shield-lock-fill text-danger mb-3" style="font-size: 4rem;"></i>
+                  <h2 class="fw-bold">Acceso Denegado</h2>
+                  <p class="text-muted">No tienes permisos para visualizar esta sección. Por favor, solicita acceso a BondiApps si crees que es un error.</p>
+                  <hr>
+                  <small class="text-secondary">IACI Audit & Cuotas · bondiapps.com</small>
+                </div>
+              </div>`;
+            document.body.style.display = 'block';
+          } else {
+            // Si hay acceso, mostramos el body y cargamos la matriz
+            document.body.style.display = 'block';
+            cargarMatriz();
+          }
+        }).validarUsuario(); // Esta función debe devolver true o false en el .gs
+      })();
+
+      let matrizCompleta = [];
+      let mesesHeader = [];
+      let cabeceraPreciosOriginal = [];
+      let mapaPreciosGlobal = {}; 
+
+      // Eliminamos window.onload = cargarMatriz; ya que ahora lo llama el validador
+
+      function cargarMatriz() {
+        google.script.run.withSuccessHandler(resPrecios => {
+          cabeceraPreciosOriginal = resPrecios.cabecera;
+          mapaPreciosGlobal = {};
+          resPrecios.valores.forEach(fila => {
+            let curso = String(fila[0]).trim();
+            mapaPreciosGlobal[curso] = {};
+            resPrecios.cabecera.forEach((mes, idx) => {
+              if(idx > 0) {
+                let val = parseFloat(String(fila[idx]).replace(',','.'));
+                mapaPreciosGlobal[curso][mes.toUpperCase()] = isNaN(val) ? 0 : val;
+              }
+            });
+          });
+
+          google.script.run.withSuccessHandler(res => {
+            matrizCompleta = res.datos;
+            mesesHeader = res.meses;
+            document.getElementById('lastUpdate').innerHTML = `<i class="bi bi-clock-history me-1"></i> Sincronizado: ${res.timestamp}`;
+            
+            const select = document.getElementById('filtroCurso');
+            const cursos = [...new Set(res.datos.map(d => d.curso))].sort();
+            select.innerHTML = '<option value="">Todos los cursos</option>';
+            cursos.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+
+            const sIni = document.getElementById('mesInicio');
+            const sFin = document.getElementById('mesFin');
+            sIni.innerHTML = ""; sFin.innerHTML = "";
+            mesesHeader.forEach((m, idx) => {
+              sIni.innerHTML += `<option value="${idx}">${m}</option>`;
+              const isLast = idx === mesesHeader.length - 1 ? 'selected' : '';
+              sFin.innerHTML += `<option value="${idx}" ${isLast}>${m}</option>`;
+            });
+
+            filtrarMatriz();
+          }).obtenerMatrizAuditoria();
+        }).obtenerGrillaPrecios();
+      }
+
+      function filtrarMatriz() {
+        const query = document.getElementById('busqueda').value.toLowerCase();
+        const cursoSeleccionado = document.getElementById('filtroCurso').value;
+        const estado = document.getElementById('filtroEstado').value;
+        const mIniIdx = parseInt(document.getElementById('mesInicio').value) || 0;
+        const mFinIdx = parseInt(document.getElementById('mesFin').value) || (mesesHeader.length - 1);
+
+        const filtrados = matrizCompleta.filter(alu => {
+          const matchNombre = alu.nombre.toLowerCase().includes(query);
+          const matchCurso = cursoSeleccionado === "" || alu.curso === cursoSeleccionado;
+          
+          let deudaEnRango = 0;
+          for (let i = mIniIdx; i <= mFinIdx; i++) {
+            let mesNombre = mesesHeader[i];
+            let cursoAlu = String(alu.curso).trim();
+            
+            let precioOficialCurso = (mapaPreciosGlobal[cursoAlu] && mapaPreciosGlobal[cursoAlu][mesNombre.toUpperCase()]) || 0;
+            let cuotaMes = parseFloat(alu.cuota) || 0; 
+
+            let cuotaAplicable = (precioOficialCurso > 0 && alu.cuota === 0) ? precioOficialCurso : cuotaMes;
+            if (cuotaMes > 0) cuotaAplicable = cuotaMes;
+
+            let pagoRealizado = parseFloat(alu.pagos[mesNombre]) || 0;
+            if (pagoRealizado < (cuotaAplicable - 15)) {
+              deudaEnRango += (cuotaAplicable - pagoRealizado);
+            }
+          }
+
+          deudaEnRango = Math.round(deudaEnRango);
+          const matchEstado = estado === "todos" || 
+                             (estado === "deudores" && deudaEnRango > 15) || 
+                             (estado === "al_dia" && deudaEnRango <= 15);
+          
+          alu.deudaCalculadaRango = deudaEnRango;
+          return matchNombre && matchCurso && matchEstado;
+        });
+
+        dibujarTabla(filtrados, mIniIdx, mFinIdx);
+      }
+
+      function dibujarTabla(datos, mIniIdx, mFinIdx) {
+        const head = document.getElementById('headMatriz');
+        const body = document.getElementById('bodyMatriz');
+        let sumaDeudaGlobal = 0;
+        const mesesVisibles = mesesHeader.slice(mIniIdx, mFinIdx + 1);
+
+        let hHtml = `<tr><th class="table-fixed-column">Alumno</th><th>Curso</th>`;
+        mesesVisibles.forEach(m => hHtml += `<th class="text-center">${m.substring(0,3)}</th>`);
+        hHtml += `<th class="text-end">Deuda</th></tr>`;
+        head.innerHTML = hHtml;
+
+        let bHtml = "";
+        datos.forEach(alu => {
+          let htmlCeldasMeses = "";
+          let cursoAlu = String(alu.curso).trim();
+
+          mesesVisibles.forEach(m => {
+            let precioOficialCurso = (mapaPreciosGlobal[cursoAlu] && mapaPreciosGlobal[cursoAlu][m.toUpperCase()]) || 0;
+            let cuotaMes = parseFloat(alu.cuota) || 0;
+            let cuotaAplicable = cuotaMes > 0 ? cuotaMes : precioOficialCurso;
+
+            const pagoRealizado = parseFloat(alu.pagos[m]) || 0;
+            let statusClass = "text-debt";
+            let displayMonto = cuotaAplicable;
+            let labelInteres = "";
+
+            if (pagoRealizado >= (cuotaAplicable - 15) && pagoRealizado <= (cuotaAplicable + 15)) {
+              statusClass = "text-paid";
+              displayMonto = cuotaAplicable; 
+            } else if (pagoRealizado > (cuotaAplicable + 15)) {
+              statusClass = "text-surplus";
+              displayMonto = cuotaAplicable;
+              labelInteres = `<br><span style="font-size:0.6rem; color:#1e40af;">+ $${Math.round(pagoRealizado - cuotaAplicable)} (Int.)</span>`;
+            } else if (pagoRealizado > 0) {
+              statusClass = "text-partial";
+              displayMonto = cuotaAplicable - pagoRealizado; 
+            }
+
+            let extraClass = alu.esFamiliar ? 'badge-familiar' : '';
+            let paidValueLabel = pagoRealizado > 0 ? `<span class="small-paid">Pagó: $${Math.round(pagoRealizado)}</span>` : `<span class="small-paid text-muted">Sin pago</span>`;
+
+            htmlCeldasMeses += `<td class="text-center">
+              ${paidValueLabel}
+              <span class="amount-badge ${statusClass} ${extraClass}">$${Math.round(displayMonto).toLocaleString()}</span>
+              ${labelInteres}
+            </td>`;
+          });
+
+          sumaDeudaGlobal += alu.deudaCalculadaRango;
+          
+          let labelFamiliar = alu.esFamiliar ? '<i class="bi bi-people-fill text-primary ms-1" title="Cuota Familiar Pactada"></i>' : '';
+
+          bHtml += `<tr class="${alu.deudaCalculadaRango > 15 ? 'row-deudor' : ''}">
+            <td class="table-fixed-column small">${alu.nombre} ${labelFamiliar}</td>
+            <td class="text-muted small">${alu.curso}</td>
+            ${htmlCeldasMeses}
+            <td class="text-end fw-bold ${alu.deudaCalculadaRango > 15 ? 'text-danger' : 'text-success'}">$ ${Math.round(alu.deudaCalculadaRango).toLocaleString()}</td>
+          </tr>`;
+        });
+
+        body.innerHTML = bHtml;
+        document.getElementById('totalDeudaLabel').innerText = "$ " + Math.round(sumaDeudaGlobal).toLocaleString();
+      }
+
+      function cargarDashboardCursos() {
+        const container = document.getElementById('containerDashboardCursos');
+        container.innerHTML = '<div class="text-center p-5 w-100"><div class="spinner-border text-primary"></div></div>';
+        
+        google.script.run.withSuccessHandler(data => {
+          container.innerHTML = "";
+          data.forEach(c => {
+            container.innerHTML += `
+              <div class="col-md-6 col-xl-4">
+                <div class="course-card">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="fw-bold m-0">${c.nombre}</h5>
+                    <span class="badge bg-primary rounded-pill">${c.alumnos} Alumnos</span>
+                  </div>
+                  <div class="small text-muted mb-1">Matrícula: <b>$${Math.round(c.matricula).toLocaleString()}</b></div>
+                  <div class="small text-muted mb-3">Cuota Marzo: <b>$${Math.round(c.cuotaMarzo).toLocaleString()}</b></div>
+                  <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                    <span class="text-uppercase small fw-bold opacity-50">Est. Revenue</span>
+                    <span class="revenue-badge">$${Math.round(c.revenueMensual).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        }).obtenerDashboardCursos();
+      }
+
+      function ejecutarCrearCurso() {
+        const btn = event.target;
+        const status = document.getElementById('statusNewCourse');
+        const datos = {
+          nombre: document.getElementById('newCourseName').value,
+          matricula: document.getElementById('newCourseMatricula').value,
+          cuotaMensual: document.getElementById('newCourseCuota').value
+        };
+
+        if (!datos.nombre || !datos.cuotaMensual) { alert("Completa nombre y cuota mensual."); return; }
+
+        btn.disabled = true;
+        status.innerHTML = "Procesando...";
+
+        google.script.run.withSuccessHandler(msg => {
+          status.innerHTML = `<span class="text-success">${msg}</span>`;
+          document.getElementById('newCourseName').value = "";
+          document.getElementById('newCourseMatricula').value = "";
+          document.getElementById('newCourseCuota').value = "";
+          btn.disabled = false;
+          cargarDashboardCursos();
+          cargarMatriz();
+        }).crearNuevoCurso(datos);
+      }
+
+      function cargarEditorPrecios() {
+        const sCurso = document.getElementById('editCurso');
+        const sMesIni = document.getElementById('editMesInicio');
+        const sMesFin = document.getElementById('editMesFin');
+        const status = document.getElementById('statusUpdate');
+        status.innerHTML = `<span class="text-muted">Obteniendo lista de cursos...</span>`;
+        
+        google.script.run.withSuccessHandler(res => {
+          sCurso.innerHTML = res.cursos.map(c => `<option value="${c}">${c}</option>`).join('');
+          const opcionesMeses = res.meses.map(m => `<option value="${m}">${m}</option>`).join('');
+          sMesIni.innerHTML = opcionesMeses;
+          sMesFin.innerHTML = opcionesMeses;
+          sMesFin.selectedIndex = res.meses.length - 1;
+          status.innerText = "";
+        }).obtenerCursosYMeses();
+      }
+
+      function ejecutarActualizacionRango() {
+        const btn = event.target;
+        const status = document.getElementById('statusUpdate');
+        const datos = {
+          curso: document.getElementById('editCurso').value,
+          mesInicio: document.getElementById('editMesInicio').value,
+          mesFin: document.getElementById('editMesFin').value,
+          monto: document.getElementById('editMonto').value
+        };
+
+        if (!datos.monto) { alert("Ingresa un monto válido"); return; }
+        const idxIni = document.getElementById('editMesInicio').selectedIndex;
+        const idxFin = document.getElementById('editMesFin').selectedIndex;
+        if (idxIni > idxFin) { alert("Rango inválido: mes inicio posterior a fin."); return; }
+
+        btn.disabled = true;
+        status.innerHTML = `<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Aplicando...`;
+
+        google.script.run.withSuccessHandler(msg => {
+          status.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-all"></i> ${msg}</span>`;
+          document.getElementById('editMonto').value = "";
+          btn.disabled = false;
+          cargarMatriz();
+        }).actualizarMontoRango(datos);
+      }
+
+      function borrarFiltros() {
+        document.getElementById('busqueda').value = "";
+        document.getElementById('filtroCurso').value = "";
+        document.getElementById('filtroEstado').value = "todos";
+        document.getElementById('mesInicio').value = "0";
+        document.getElementById('mesFin').value = mesesHeader.length - 1;
+        filtrarMatriz();
+      }
+    </script>
+  </body>
+</html>
